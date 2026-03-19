@@ -1,0 +1,35 @@
+site_name: QuantumRiskEngine
+site_description: Multi-domain simulation framework for cyber-adjusted portfolio risk
+site_author: Catrina Turner
+repo_url: https://github.com/charismaforever/QuantumRiskEngine
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: cyan
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Modules:
+    - Core Engine: core.md
+    - Quantum Crypto: quantum_crypto.md
+    - Adversarial AI: ai_adversarial.md
+    - Threat Intel: threat_intel.md
+    - Financial Risk: financial_risk.md
+  - Research Paper: paper.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: true
+
+plugins:
+  - search
