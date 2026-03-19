@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuantumRiskEngine — Simulation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --bg2: #0b0f1e;
+    --bg3: #111728;
+    --border: rgba(99,179,237,0.12);
+    --border-bright: rgba(99,179,237,0.35);
+    --accent: #3ecfcf;
+    --accent2: #7c6af7;
+    --accent3: #f7a04a;
+    --danger: #f76a6a;
+    --success: #4af7a0;
+    --text: #e2eaf8;
+    --muted: #5a6a8a;
+    --muted2: #8a9bb8;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(62,207,207,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(62,207,207,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header-left h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .header-left h1 span { color: var(--accent); }
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    font-size: 11px;
+    color: var(--muted2);
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Scenario selector */
+  .scenario-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .scenario-bar label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+  .scenario-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted2);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .scenario-btn:hover { border-color: var(--border-bright); color: var(--text); }
+  .scenario-btn.active {
+    background: rgba(62,207,207,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Run button */
+  .run-btn {
+    margin-left: auto;
+    padding: 8px 22px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #050810;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .run-btn:hover { background: #5fe0e0; transform: translateY(-1px); }
+  .run-btn:active { transform: translateY(0); }
+  .run-btn.running { background: var(--muted); cursor: not-allowed; }
+
+  /* Parameter sliders */
+  .params-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .param-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    transition: border-color 0.2s;
+  }
+  .param-card:hover { border-color: var(--border-bright); }
+  .param-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .param-value {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .param-name {
+    color: var(--muted2);
+    font-size: 13px;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(62,207,207,0.5);
+    transition: box-shadow 0.2s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 14px rgba(62,207,207,0.8); }
+
+  /* Results grid */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:680px) { .results-grid { grid-template-columns: repeat(2,1fr); } }
+
+  .metric-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, transform 0.25s;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 10px 10px 0 0;
+    opacity: 0.8;
+  }
+  .metric-card.quantum::before { background: var(--accent2); }
+  .metric-card.adversarial::before { background: var(--danger); }
+  .metric-card.threat::before { background: var(--accent3); }
+  .metric-card.var::before { background: var(--danger); }
+  .metric-card.cvar::before { background: #f74a9f; }
+  .metric-card.sharpe::before { background: var(--success); }
+
+  .metric-card.animating { animation: cardPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes cardPop { 0%{transform:scale(0.96)} 100%{transform:scale(1)} }
+
+  .metric-tag {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .metric-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+    transition: color 0.3s;
+  }
+  .metric-desc {
+    font-size: 11px;
+    color: var(--muted2);
+    line-height: 1.5;
+  }
+  .metric-bar-bg {
+    margin-top: 12px;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Output terminal */
+  .terminal-section { margin-bottom: 28px; }
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 11px;
+    color: var(--muted2);
+  }
+  .terminal-dots { display: flex; gap: 6px; }
+  .terminal-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .terminal-dots .r { background: #f76a6a; }
+  .terminal-dots .y { background: var(--accent3); }
+  .terminal-dots .g { background: var(--success); }
+  .terminal-body {
+    background: #020407;
+    border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    padding: 20px 22px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.8;
+    min-height: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+  .term-line { opacity: 0; transition: opacity 0.2s; }
+  .term-line.visible { opacity: 1; }
+  .term-c1 { color: var(--accent); }
+  .term-c2 { color: var(--accent2); }
+  .term-c3 { color: var(--accent3); }
+  .term-c4 { color: var(--danger); }
+  .term-c5 { color: var(--success); }
+  .term-dim { color: var(--muted); }
+  .cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent); animation: blink 1s infinite; vertical-align: middle; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Risk distribution chart */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:660px) { .charts-row { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .chart-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+  }
+  canvas { width: 100% !important; }
+
+  /* Stress test table */
+  .stress-section { margin-bottom: 28px; }
+  .stress-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+  .stress-table { width: 100%; border-collapse: collapse; }
+  .stress-table th {
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stress-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(99,179,237,0.05);
+    transition: background 0.15s;
+  }
+  .stress-table tr:hover td { background: rgba(62,207,207,0.04); }
+  .severity-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .severity-fill {
+    height: 4px;
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,8,16,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .loading-overlay.active { opacity: 1; pointer-events: all; }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Initializing simulation...</div>
+</div>
+
+<div class="page">
+
+  <header>
+    <div class="header-left">
+      <div class="eyebrow">Imminent Flair / Quantitative Research</div>
+      <h1>Quantum<span>Risk</span>Engine</h1>
+      <div style="font-size:12px;color:var(--muted2);margin-top:6px;">Simulation Dashboard · v0.1.0</div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill"><span class="dot"></span> Engine ready</div>
+      <div class="status-pill" id="simCount">0 simulations run</div>
+    </div>
+  </header>
+
+  <!-- Scenario Selector -->
+  <div class="scenario-bar">
+    <label>Scenario</label>
+    <button class="scenario-btn active" onclick="setScenario('baseline',this)">Hedge Fund Baseline</button>
+    <button class="scenario-btn" onclick="setScenario('high_quantum',this)">High Quantum Risk</button>
+    <button class="scenario-btn" onclick="setScenario('well_defended',this)">Well Defended</button>
+    <button class="run-btn" id="runBtn" onclick="runSimulation()">▶ Run Simulation</button>
+  </div>
+
+  <!-- Parameter Sliders -->
+  <div class="params-grid" id="paramsGrid">
+    <div class="param-card">
+      <div class="param-label">
+        <span>Years to CRQC</span>
+        <span class="param-value" id="val-crqc">7</span>
+      </div>
+      <div class="param-name">Quantum Timeline</div>
+      <input type="range" min="3" max="20" value="7" id="sl-crqc"
+        oninput="document.getElementById('val-crqc').textContent=this.value">
+    </div>
+    <div class="param-card">
+      <div class="param-label">
+        <span>Migration Budget</span>
+        <span class="param-value" id="val-budget">$2M</span>
+      </div>
+      <div class="param-name">PQC Migration ($USD)</div>
+      <input type="range" min="1" max="10" value="2" id="sl-budget"
+        oninput="document.getElementById('val-budget').textContent='$'+this.value+'M'">
+    </div>
+    <div class="param-card">
+      <div class="param-label">
+        <span>Training Exposure</span>
+        <span class="param-value" id="val-exposure">15%</span>
+      </div>
+      <div class="param-name">ML Data Exposure</div>
+      <input type="range" min="1" max="50" value="15" id="sl-exposure"
+        oninput="document.getElementById('val-exposure').textContent=this.value+'%'">
+    </div>
+    <div class="param-card">
+      <div class="param-label">
+        <span>Portfolio Value</span>
+        <span class="param-value" id="val-portfolio">$500M</span>
+      </div>
+      <div class="param-name">AUM (USD)</div>
+      <input type="range" min="100" max="2000" step="100" value="500" id="sl-portfolio"
+        oninput="document.getElementById('val-portfolio').textContent='$'+this.value+'M'">
+    </div>
+    <div class="param-card">
+      <div class="param-label">
+        <span>Confidence Level</span>
+        <span class="param-value" id="val-confidence">99%</span>
+      </div>
+      <div class="param-name">VaR Confidence</div>
+      <input type="range" min="90" max="99" value="99" id="sl-confidence"
+        oninput="document.getElementById('val-confidence').textContent=this.value+'%'">
+    </div>
+    <div class="param-card">
+      <div class="param-label">
+        <span>N Simulations</span>
+        <span class="param-value" id="val-nsim">10,000</span>
+      </div>
+      <div class="param-name">Monte Carlo Paths</div>
+      <input type="range" min="1000" max="50000" step="1000" value="10000" id="sl-nsim"
+        oninput="document.getElementById('val-nsim').textContent=Number(this.value).toLocaleString()">
+    </div>
+  </div>
+
+  <!-- Metric Cards -->
+  <div class="results-grid" id="resultsGrid">
+    <div class="metric-card quantum" id="card-qrs">
+      <div class="metric-tag">Module 1 · Quantum Crypto</div>
+      <div class="metric-value" id="m-qrs" style="color:var(--accent2)">—</div>
+      <div class="metric-desc">QuantumRiskScore — probability of PQC-relevant breach within simulation horizon</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-qrs" style="background:var(--accent2);width:0%"></div></div>
+    </div>
+    <div class="metric-card adversarial" id="card-adv">
+      <div class="metric-tag">Module 2 · Adversarial AI</div>
+      <div class="metric-value" id="m-adv" style="color:var(--danger)">—</div>
+      <div class="metric-desc">AdversarialThreat — composite ML attack success probability on trading stack</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-adv" style="background:var(--danger);width:0%"></div></div>
+    </div>
+    <div class="metric-card threat" id="card-thr">
+      <div class="metric-tag">Module 3 · Threat Intel</div>
+      <div class="metric-value" id="m-thr" style="color:var(--accent3)">—</div>
+      <div class="metric-desc">ThreatLikelihood — Bayesian posterior breach probability, sector-weighted</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-thr" style="background:var(--accent3);width:0%"></div></div>
+    </div>
+    <div class="metric-card var" id="card-var">
+      <div class="metric-tag">Module 4 · CyberVaR 99%</div>
+      <div class="metric-value" id="m-var" style="color:var(--danger)">—</div>
+      <div class="metric-desc">Cyber-adjusted Value at Risk — annual portfolio loss at 99% confidence</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-var" style="background:var(--danger);width:0%"></div></div>
+    </div>
+    <div class="metric-card cvar" id="card-cvar">
+      <div class="metric-tag">Module 4 · CyberCVaR 99%</div>
+      <div class="metric-value" id="m-cvar" style="color:#f74a9f">—</div>
+      <div class="metric-desc">Expected Shortfall — mean loss in worst tail beyond VaR threshold</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-cvar" style="background:#f74a9f;width:0%"></div></div>
+    </div>
+    <div class="metric-card sharpe" id="card-sharpe">
+      <div class="metric-tag">Adversarial ML · Sharpe Impact</div>
+      <div class="metric-value" id="m-sharpe" style="color:var(--success)">—</div>
+      <div class="metric-desc">Estimated Sharpe ratio degradation from adversarial ML attacks on alpha signals</div>
+      <div class="metric-bar-bg"><div class="metric-bar-fill" id="bar-sharpe" style="background:var(--success);width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Terminal Output -->
+  <div class="terminal-section">
+    <div class="terminal-header">
+      <div class="terminal-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <span>simulation_engine.py — output</span>
+    </div>
+    <div class="terminal-body" id="termBody">
+      <div class="term-line visible term-dim">$ python -m core.simulation_engine --config config/scenarios/hedge_fund_baseline.yaml</div>
+      <div class="term-line visible term-dim"># Configure parameters and press Run Simulation to execute.</div>
+      <div class="term-line visible"><span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Return Distribution — Baseline vs Cyber-Adjusted</div>
+      <canvas id="distChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk Score Breakdown</div>
+      <canvas id="radarChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Stress Test Table -->
+  <div class="stress-section">
+    <div class="stress-title">Cyber Stress Scenarios — Expected Annual Loss</div>
+    <table class="stress-table" id="stressTable">
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Return Impact</th>
+          <th>Dollar Loss</th>
+          <th>Annual Prob.</th>
+          <th>Exp. Annual Loss</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody id="stressBody">
+        <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Run simulation to populate stress tests</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <div>QuantumRiskEngine · Catrina Turner · <a href="https://imminentflair.com">Imminent Flair</a></div>
+    <div id="runtimeDisplay" style="color:var(--muted)">—</div>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ─── Simulation Engine (JS port of core Python logic) ──────────────────────
+
+const SCENARIOS = {
+  baseline: {
+    crqc: 7, budget: 2, exposure: 15, portfolio: 500, confidence: 99, nsim: 10000,
+    sector: 'financial_services', actors: ['FIN7','Lazarus','APT29'],
+    encryption: 'RSA-2048', defenses: 2
+  },
+  high_quantum: {
+    crqc: 5, budget: 0.5, exposure: 25, portfolio: 1000, confidence: 99, nsim: 20000,
+    sector: 'financial_services', actors: ['Lazarus','APT41'],
+    encryption: 'ECC-256', defenses: 1
+  },
+  well_defended: {
+    crqc: 10, budget: 5, exposure: 5, portfolio: 500, confidence: 99, nsim: 10000,
+    sector: 'financial_services', actors: ['FIN7'],
+    encryption: 'AES-256', defenses: 4
+  }
+};
+
+let activeScenario = 'baseline';
+let totalRuns = 0;
+let distChart = null;
+let radarChart = null;
+
+function setScenario(key, btn) {
+  activeScenario = key;
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const sc = SCENARIOS[key];
+  document.getElementById('sl-crqc').value = sc.crqc;
+  document.getElementById('val-crqc').textContent = sc.crqc;
+  document.getElementById('sl-budget').value = sc.budget;
+  document.getElementById('val-budget').textContent = '$' + sc.budget + 'M';
+  document.getElementById('sl-exposure').value = sc.exposure;
+  document.getElementById('val-exposure').textContent = sc.exposure + '%';
+  document.getElementById('sl-portfolio').value = sc.portfolio;
+  document.getElementById('val-portfolio').textContent = '$' + sc.portfolio + 'M';
+  document.getElementById('sl-confidence').value = sc.confidence;
+  document.getElementById('val-confidence').textContent = sc.confidence + '%';
+  document.getElementById('sl-nsim').value = sc.nsim;
+  document.getElementById('val-nsim').textContent = sc.nsim.toLocaleString();
+}
+
+// ─── Core math helpers ─────────────────────────────────────────────────────
+
+function rng_normal(mu=0, sigma=1) {
+  // Box-Muller
+  const u1 = Math.random(), u2 = Math.random();
+  return mu + sigma * Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+}
+
+function rng_lognormal(mu, sigma) {
+  return Math.exp(rng_normal(mu, sigma));
+}
+
+function percentile(arr, p) {
+  const sorted = [...arr].sort((a,b) => a-b);
+  const idx = Math.floor((p/100) * sorted.length);
+  return sorted[Math.max(0, Math.min(idx, sorted.length-1))];
+}
+
+// ─── Module 1: Quantum Risk ────────────────────────────────────────────────
+
+function computeQuantumRiskScore(crqcYears, budgetM, exposure, halfLife=3.5) {
+  const n = 5000;
+  let breach_probs = [];
+  for (let yr = 1; yr <= 10; yr++) {
+    let crqcHits = 0;
+    for (let i = 0; i < n; i++) {
+      const t = rng_lognormal(Math.log(crqcYears), 0.4);
+      if (t <= yr) crqcHits++;
+    }
+    const crqcProb = crqcHits / n;
+    const decay = 1 - Math.exp(-yr / halfLife);
+    const hndl = Math.min(1, (exposure/100) * crqcProb * 1.0);
+    const p = Math.min(1, Math.max(0, 0.5*decay + 0.5*hndl));
+    breach_probs.push(p);
+  }
+  const baseCost = 500000 * 1.0;
+  const budgetRatio = Math.min(1, (budgetM * 1e6) / baseCost);
+  const timeRatio = Math.min(1, crqcYears / halfLife);
+  const readiness = 0.6*budgetRatio + 0.4*timeRatio;
+  const peakProb = Math.max(...breach_probs);
+  return Math.min(1, Math.max(0, peakProb * (1 - 0.7*readiness)));
+}
+
+// ─── Module 2: Adversarial AI ─────────────────────────────────────────────
+
+function computeAdversarialScore(exposure, nDefenses) {
+  const basePoisoning = 1 - Math.exp(-3.0 * (exposure/100) * 0.8);
+  const baseEvasion = 0.55 + 0.15 * (exposure/100);
+  const defenseDiscount = Math.min(0.9, 1 - Math.pow(0.65, nDefenses));
+  const poisoning = Math.min(1, basePoisoning * (1 - 0.7*defenseDiscount));
+  const evasion = Math.min(1, baseEvasion * (1 - defenseDiscount));
+  const overall = 0.4*evasion + 0.4*poisoning + 0.2*(evasion*0.7);
+  const sharpe = -(0.25*poisoning + 0.10*evasion);
+  return { overall: Math.min(1,Math.max(0,overall)), sharpe };
+}
+
+// ─── Module 3: Threat Intel ────────────────────────────────────────────────
+
+function computeThreatLikelihood(nActors, sectorBase=0.18) {
+  const affinities = { 1:0.88, 2:0.92, 3:0.75, 4:0.65 };
+  let probNone = 1.0;
+  for (let i = 0; i < nActors; i++) {
+    const aff = affinities[Math.min(nActors, 4)] || 0.5;
+    const p = aff * (0.85 + Math.random()*0.15);
+    probNone *= (1 - p);
+  }
+  const combined = 1 - probNone;
+  return Math.min(1, Math.max(0, 0.6*combined + 0.4*sectorBase));
+}
+
+// ─── Module 4: Monte Carlo Portfolio ──────────────────────────────────────
+
+function runMonteCarlo(portfolioM, confidence, nSim, qrs, adv, threat) {
+  const alpha = 1 - confidence/100;
+  const mu = 0.08, sigma = 0.16;
+  const baselineReturns = [];
+  const cyberReturns = [];
+
+  for (let i = 0; i < nSim; i++) {
+    // Baseline GBM
+    const base = rng_normal(mu - 0.5*sigma*sigma, sigma);
+    baselineReturns.push(base);
+
+    // Quantum shock (Poisson)
+    const nEvents = Math.random() < qrs ? 1 : 0;
+    const quantumShock = nEvents > 0 ? rng_normal(-0.12, 0.04) : 0;
+
+    // ML drag
+    const mlDrag = -adv * 0.03 + rng_normal(0, 0.01);
+
+    // Threat event (Pareto-ish)
+    const threatOccurs = Math.random() < threat ? 1 : 0;
+    const severity = threatOccurs ? Math.abs(rng_normal(0.05, 0.03)) : 0;
+
+    cyberReturns.push(base + quantumShock + mlDrag - severity);
+  }
+
+  const sortedBase = [...baselineReturns].sort((a,b)=>a-b);
+  const sortedCyber = [...cyberReturns].sort((a,b)=>a-b);
+  const varIdx = Math.floor(alpha * nSim);
+
+  const cyberVar = sortedCyber[varIdx];
+  const cvarArr = sortedCyber.slice(0, varIdx);
+  const cyberCvar = cvarArr.length ? cvarArr.reduce((a,b)=>a+b,0)/cvarArr.length : cyberVar;
+
+  return { baselineReturns, cyberReturns, cyberVar, cyberCvar, portfolioM };
+}
+
+// ─── Stress Scenarios ─────────────────────────────────────────────────────
+
+const STRESS_SCENARIOS = [
+  { name:'Quantum cryptographic breach', impact:-0.18, prob:0.02, recovery:18, color:'#f74a9f' },
+  { name:'Supply chain compromise', impact:-0.12, prob:0.06, recovery:9, color:'var(--danger)' },
+  { name:'Ransomware (major)', impact:-0.08, prob:0.12, recovery:4, color:'var(--accent3)' },
+  { name:'AI model poisoning', impact:-0.06, prob:0.08, recovery:3, color:'var(--accent2)' },
+  { name:'SWIFT/payment fraud', impact:-0.05, prob:0.04, recovery:2, color:'#63b3ed' },
+  { name:'DDoS market disruption', impact:-0.03, prob:0.20, recovery:0.5, color:'var(--success)' },
+];
+
+// ─── UI rendering ──────────────────────────────────────────────────────────
+
+function animateValue(id, value, format='score') {
+  const el = document.getElementById(id);
+  const start = 0;
+  const duration = 600;
+  const startTime = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const ease = 1 - Math.pow(1-t, 3);
+    const current = start + (value - start) * ease;
+    if (format === 'score') el.textContent = current.toFixed(2);
+    else if (format === 'pct') el.textContent = (current*100).toFixed(1) + '%';
+    else if (format === 'signed') el.textContent = (current >= 0 ? '+' : '') + (current*100).toFixed(1) + '%';
+    else if (format === 'sharpe') el.textContent = (current >= 0 ? '+' : '') + current.toFixed(3);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function updateMetricBar(id, value, max=1) {
+  const pct = Math.min(100, Math.abs(value)/max*100);
+  document.getElementById(id).style.width = pct + '%';
+}
+
+function popCard(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('animating');
+  void el.offsetWidth;
+  el.classList.add('animating');
+}
+
+function renderTerminal(scenario, params, results) {
+  const body = document.getElementById('termBody');
+  const scenarioName = {baseline:'hedge_fund_baseline',high_quantum:'high_quantum_risk',well_defended:'well_defended'}[scenario];
+  const lines = [
+    { cls:'term-dim', text:`$ python -m core.simulation_engine --config config/scenarios/${scenarioName}.yaml` },
+    { cls:'term-dim', text:`  --n-simulations ${params.nsim.toLocaleString()} --seed 42` },
+    { cls:'', text:'' },
+    { cls:'term-c1', text:`  Initializing QuantumRiskEngine v0.1.0...` },
+    { cls:'term-dim', text:`  Seeding RNG (seed=42) · ${params.nsim.toLocaleString()} Monte Carlo paths` },
+    { cls:'', text:'' },
+    { cls:'term-c2', text:`  [MODULE 1] quantum_crypto.PQCVulnerabilityModel` },
+    { cls:'term-dim', text:`    Encryption: ${params.encryption}  CRQC horizon: ${params.crqc}yr  Budget: $${params.budget}M` },
+    { cls:'term-c5', text:`    → QuantumRiskScore:        ${results.qrs.toFixed(4)}` },
+    { cls:'', text:'' },
+    { cls:'term-c2', text:`  [MODULE 2] ai_adversarial.AdversarialAttackSimulator` },
+    { cls:'term-dim', text:`    Architecture: gradient_boosting  Exposure: ${params.exposure}%  Defenses: ${params.defenses}` },
+    { cls:'term-c5', text:`    → AdversarialThreatScore:   ${results.adv.toFixed(4)}` },
+    { cls:'term-c5', text:`    → Sharpe Impact:            ${results.sharpe >= 0 ? '+' : ''}${results.sharpe.toFixed(4)}` },
+    { cls:'', text:'' },
+    { cls:'term-c2', text:`  [MODULE 3] threat_intel.TTPEngine` },
+    { cls:'term-dim', text:`    Sector: financial_services  Actors: ${params.actors}  Region: north_america` },
+    { cls:'term-c5', text:`    → ThreatLikelihood:         ${results.threat.toFixed(4)}` },
+    { cls:'', text:'' },
+    { cls:'term-c2', text:`  [MODULE 4] financial_risk.CyberAdjustedMonteCarlo` },
+    { cls:'term-dim', text:`    Portfolio: $${params.portfolio}M  Confidence: ${params.confidence}%  Paths: ${params.nsim.toLocaleString()}` },
+    { cls:'term-c4', text:`    → Cyber-adjusted VaR:       ${(results.cyberVar*100).toFixed(2)}%  ($${(Math.abs(results.cyberVar)*params.portfolio).toFixed(1)}M loss)` },
+    { cls:'term-c4', text:`    → Cyber-adjusted CVaR:      ${(results.cyberCvar*100).toFixed(2)}%  ($${(Math.abs(results.cyberCvar)*params.portfolio).toFixed(1)}M loss)` },
+    { cls:'', text:'' },
+    { cls:'term-c1', text:`  ${'='.repeat(60)}` },
+    { cls:'term-c1', text:`  Simulation complete · ${results.elapsed}ms elapsed` },
+    { cls:'term-c1', text:`  ${'='.repeat(60)}` },
+  ];
+
+  body.innerHTML = '';
+  lines.forEach((l, i) => {
+    const div = document.createElement('div');
+    div.className = 'term-line ' + l.cls;
+    div.textContent = l.text;
+    body.appendChild(div);
+    setTimeout(() => div.classList.add('visible'), i * 40);
+  });
+}
+
+function renderCharts(baselineReturns, cyberReturns) {
+  // Distribution chart (histogram)
+  const bins = 60;
+  const min = -0.6, max = 0.4;
+  const step = (max - min) / bins;
+  const labels = [];
+  const baseCounts = new Array(bins).fill(0);
+  const cyberCounts = new Array(bins).fill(0);
+
+  for (let i = 0; i < bins; i++) labels.push(((min + i*step)*100).toFixed(0) + '%');
+
+  const sample = Math.min(5000, baselineReturns.length);
+  for (let i = 0; i < sample; i++) {
+    const bi = Math.floor((baselineReturns[i] - min) / step);
+    const ci = Math.floor((cyberReturns[i] - min) / step);
+    if (bi >= 0 && bi < bins) baseCounts[bi]++;
+    if (ci >= 0 && ci < bins) cyberCounts[ci]++;
+  }
+
+  if (distChart) distChart.destroy();
+  distChart = new Chart(document.getElementById('distChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Baseline', data:baseCounts, backgroundColor:'rgba(99,179,237,0.25)', borderColor:'rgba(99,179,237,0.5)', borderWidth:1 },
+        { label:'Cyber-Adjusted', data:cyberCounts, backgroundColor:'rgba(247,106,106,0.25)', borderColor:'rgba(247,106,106,0.5)', borderWidth:1 },
+      ]
+    },
+    options: {
+      responsive:true, animation:{ duration:600 },
+      plugins:{ legend:{ labels:{ color:'#8a9bb8', font:{size:10,family:'DM Mono'} } } },
+      scales:{
+        x:{ ticks:{ color:'#5a6a8a', font:{size:9}, maxTicksLimit:8 }, grid:{ color:'rgba(255,255,255,0.04)' } },
+        y:{ ticks:{ color:'#5a6a8a', font:{size:9} }, grid:{ color:'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  // Radar chart
+  if (radarChart) radarChart.destroy();
+  radarChart = new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: ['Quantum Risk','Adversarial AI','Threat Likelihood','VaR Severity','CVaR Severity','Overall Exposure'],
+      datasets: [{
+        label: activeScenario.replace('_',' '),
+        data: [
+          window._lastResults.qrs,
+          window._lastResults.adv,
+          window._lastResults.threat,
+          Math.min(1, Math.abs(window._lastResults.cyberVar)*5),
+          Math.min(1, Math.abs(window._lastResults.cyberCvar)*5),
+          (window._lastResults.qrs + window._lastResults.adv + window._lastResults.threat) / 3
+        ],
+        backgroundColor: 'rgba(62,207,207,0.12)',
+        borderColor: 'rgba(62,207,207,0.7)',
+        pointBackgroundColor: 'var(--accent)',
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, animation:{ duration:700 },
+      plugins:{ legend:{ labels:{ color:'#8a9bb8', font:{size:10,family:'DM Mono'} } } },
+      scales:{
+        r:{
+          min:0, max:1,
+          ticks:{ color:'#5a6a8a', font:{size:9}, stepSize:0.25, backdropColor:'transparent' },
+          grid:{ color:'rgba(255,255,255,0.06)' },
+          angleLines:{ color:'rgba(255,255,255,0.06)' },
+          pointLabels:{ color:'#8a9bb8', font:{size:10,family:'DM Mono'} }
+        }
+      }
+    }
+  });
+}
+
+function renderStressTable(portfolioM) {
+  const tbody = document.getElementById('stressBody');
+  const rows = STRESS_SCENARIOS.map(sc => {
+    const dollarLoss = Math.abs(sc.impact) * portfolioM;
+    const eal = sc.prob * dollarLoss;
+    const severity = Math.abs(sc.impact) / 0.18;
+    return `<tr>
+      <td style="color:var(--text)">${sc.name}</td>
+      <td style="color:var(--danger)">${(sc.impact*100).toFixed(1)}%</td>
+      <td style="color:var(--text)">$${dollarLoss.toFixed(0)}M</td>
+      <td style="color:var(--muted2)">${(sc.prob*100).toFixed(0)}%</td>
+      <td style="color:${sc.color};font-weight:500">$${eal.toFixed(1)}M</td>
+      <td>
+        <div class="severity-bar">
+          <div class="severity-fill" style="background:${sc.color};width:${Math.min(100,severity*100).toFixed(0)}%;height:4px;border-radius:2px;min-width:4px"></div>
+          <span style="font-size:10px;color:var(--muted2)">${(severity*100).toFixed(0)}%</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+// ─── Main simulation runner ────────────────────────────────────────────────
+
+async function runSimulation() {
+  const btn = document.getElementById('runBtn');
+  if (btn.classList.contains('running')) return;
+  btn.classList.add('running');
+  btn.textContent = '⏳ Running...';
+
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('active');
+
+  const loadingMsgs = [
+    'Initializing simulation engine...',
+    'Running PQC vulnerability model...',
+    'Simulating adversarial attacks...',
+    'Computing Bayesian posteriors...',
+    'Running Monte Carlo paths...',
+    'Aggregating risk metrics...',
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    document.getElementById('loadingText').textContent = loadingMsgs[Math.min(msgIdx++, loadingMsgs.length-1)];
+  }, 320);
+
+  const params = {
+    crqc: +document.getElementById('sl-crqc').value,
+    budget: +document.getElementById('sl-budget').value,
+    exposure: +document.getElementById('sl-exposure').value,
+    portfolio: +document.getElementById('sl-portfolio').value,
+    confidence: +document.getElementById('sl-confidence').value,
+    nsim: +document.getElementById('sl-nsim').value,
+    encryption: { baseline:'RSA-2048', high_quantum:'ECC-256', well_defended:'AES-256' }[activeScenario],
+    defenses: { baseline:2, high_quantum:1, well_defended:4 }[activeScenario],
+    actors: SCENARIOS[activeScenario].actors,
+  };
+
+  const t0 = performance.now();
+
+  // Run in microtask batches to stay responsive
+  await new Promise(r => setTimeout(r, 80));
+  const qrs = computeQuantumRiskScore(params.crqc, params.budget, params.exposure);
+
+  await new Promise(r => setTimeout(r, 80));
+  const { overall: adv, sharpe } = computeAdversarialScore(params.exposure, params.defenses);
+
+  await new Promise(r => setTimeout(r, 80));
+  const threat = computeThreatLikelihood(params.actors.length);
+
+  await new Promise(r => setTimeout(r, 80));
+  const { baselineReturns, cyberReturns, cyberVar, cyberCvar } = runMonteCarlo(
+    params.portfolio, params.confidence, Math.min(params.nsim, 8000), qrs, adv, threat
+  );
+
+  const elapsed = Math.round(performance.now() - t0);
+
+  clearInterval(msgInterval);
+  overlay.classList.remove('active');
+
+  const results = { qrs, adv, threat, sharpe, cyberVar, cyberCvar, elapsed };
+  window._lastResults = results;
+
+  // Update metric cards
+  ['card-qrs','card-adv','card-thr','card-var','card-cvar','card-sharpe'].forEach(popCard);
+
+  animateValue('m-qrs', qrs, 'score');
+  animateValue('m-adv', adv, 'score');
+  animateValue('m-thr', threat, 'score');
+  animateValue('m-var', cyberVar, 'signed');
+  animateValue('m-cvar', cyberCvar, 'signed');
+  animateValue('m-sharpe', sharpe, 'sharpe');
+
+  setTimeout(() => {
+    updateMetricBar('bar-qrs', qrs);
+    updateMetricBar('bar-adv', adv);
+    updateMetricBar('bar-thr', threat);
+    updateMetricBar('bar-var', Math.abs(cyberVar), 0.5);
+    updateMetricBar('bar-cvar', Math.abs(cyberCvar), 0.5);
+    updateMetricBar('bar-sharpe', Math.abs(sharpe), 0.5);
+  }, 100);
+
+  renderTerminal(activeScenario, params, results);
+
+  setTimeout(() => {
+    renderCharts(baselineReturns, cyberReturns);
+    renderStressTable(params.portfolio);
+  }, 400);
+
+  totalRuns += params.nsim;
+  document.getElementById('simCount').textContent = (totalRuns/1000).toFixed(0) + 'K simulations run';
+  document.getElementById('runtimeDisplay').textContent = `Runtime: ${elapsed}ms · Seed: 42`;
+
+  btn.classList.remove('running');
+  btn.textContent = '▶ Run Simulation';
+}
+
+// Auto-run on load
+window.addEventListener('load', () => setTimeout(runSimulation, 400));
+</script>
+</body>
+</html>
