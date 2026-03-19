@@ -1,0 +1,50 @@
+name: hedge_fund_baseline
+description: >
+  Baseline scenario for a mid-size hedge fund ($500M AUM) using ML-driven
+  quantitative strategies. Represents a financial services firm with moderate
+  quantum migration readiness, high adversarial ML exposure (sentiment alpha),
+  and active threat actors from FIN7 and Lazarus groups.
+
+random_seed: 42
+
+quantum_crypto:
+  encryption_standard: RSA-2048
+  migration_target: CRYSTALS-Kyber
+  years_to_cryptographically_relevant_qc: 7
+  migration_budget_usd: 2000000
+  hndl_data_sensitivity: high
+  simulation_horizon_years: 10
+
+adversarial_ai:
+  attack_types:
+    - evasion
+    - poisoning
+    - model_inversion
+  model_architecture: gradient_boosting
+  training_data_exposure: 0.15
+  defense_mechanisms:
+    - adversarial_training
+    - input_validation
+  alpha_signal_value_usd: 50000000
+
+threat_intel:
+  sector: financial_services
+  threat_actors:
+    - FIN7
+    - Lazarus
+    - APT29
+  prior_breach_probability: 0.18
+  mitre_framework_version: "14.1"
+  geographic_region: north_america
+
+financial_risk:
+  portfolio_value_usd: 500000000
+  confidence_level: 0.99
+  time_horizon_days: 252
+  n_simulations: 10000
+  cyber_shock_distribution: pareto
+  correlation_with_market: 0.25
+  asset_classes:
+    - equities
+    - fixed_income
+    - alternatives
